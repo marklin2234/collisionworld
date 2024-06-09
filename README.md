@@ -1,10 +1,10 @@
-# Project 2
+# CollisionWorld
 
 ## Performance Improvements
 
 | Version | mit.in | koch.in |
 | --- | --- | --- |
-| Original | 45.905592s | 932.316011s |
+| Naive | 45.905592s | 932.316011s |
 | quad tree | 9.328597s | 18.491237s | 
 | parallelization | 1.546889s | 3.322799s |
 
@@ -56,4 +56,6 @@ tag,work (seconds),span (seconds),parallelism,burdened_span (seconds),burdened_p
 ,22.2409,0.792948,28.0483,2.1343,10.4207
 ```
 
-pretty good!
+## Running
+
+To run, simply run the `screensaver` executable and follow the CLI.
