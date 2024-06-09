@@ -1,0 +1,3 @@
+-I/opt/opencilk/lib/clang/16/include
+-ferror-limit=0
+-I/opt/X11/include/
