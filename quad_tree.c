@@ -1,12 +1,12 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <cilk/cilk.h>
-
 #include "./quad_tree.h"
 #include "stdbool.h"
+#include <cilk/cilk.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-QuadTree *QuadTree_initialize(QuadTree *parent, Vec tl, Vec br, unsigned int depth) {
+QuadTree *QuadTree_initialize(QuadTree *parent, Vec tl, Vec br,
+                              unsigned int depth) {
   QuadTree *quad_tree = (QuadTree *)malloc(sizeof(QuadTree));
 
   if (quad_tree == NULL)
@@ -30,14 +30,13 @@ QuadTree *QuadTree_create(CollisionWorld *collisionWorld,
 
   // Compare this quadtrees lines with its parent.
   if (parent != NULL) {
-    // printf("%d, %d\n", numOfLines, parent->numOfLines);
-    detect_collision(collisionWorld, intersectionEventList, lines, numOfLines, parent, numCollisions);
+    detect_collision(collisionWorld, intersectionEventList, lines, numOfLines,
+                     parent, numCollisions);
   }
 
   // Then create the new quad_tree
-  QuadTree *quad_tree = QuadTree_initialize(parent, tl, br, parent == NULL ? 0 : parent->depth + 1);
-  // printf("%d\n", quad_tree->depth);
-
+  QuadTree *quad_tree = QuadTree_initialize(
+      parent, tl, br, parent == NULL ? 0 : parent->depth + 1);
   if (quad_tree == NULL) {
     return NULL;
   }
@@ -45,13 +44,14 @@ QuadTree *QuadTree_create(CollisionWorld *collisionWorld,
   // if too many lines, then we need to create children.
   if (numOfLines > LINE_THRESHOLD || quad_tree->depth == MAX_DEPTH) {
     quad_tree->lines = (Line **)malloc(sizeof(Line *) * LINE_THRESHOLD);
-    
+
     if (quad_tree->lines == NULL) {
       free(quad_tree);
       return NULL;
     }
     // Divide the space into four regions
-    quad_tree->children = (QuadTree **)malloc(sizeof(QuadTree *) * NUM_CHILDREN);
+    quad_tree->children =
+        (QuadTree **)malloc(sizeof(QuadTree *) * NUM_CHILDREN);
 
     if (quad_tree->children == NULL) {
       free(quad_tree->lines);
@@ -59,17 +59,18 @@ QuadTree *QuadTree_create(CollisionWorld *collisionWorld,
       return NULL;
     }
 
-    // then each child needs to get initialized with their own lines, numOfLines, tl and br
+    // then each child needs to get initialized with their own lines,
+    // numOfLines, tl and br
     Vec **vec_array = getPoints(tl, br);
     if (vec_array == NULL) {
       QuadTree_destroy(quad_tree);
       return NULL;
     }
 
-    // for (int i = 0; i < 8; i++) printf("%f, %f\n", vec_array[i]->x, vec_array[i]->y);
     Line **quad_lines[NUM_CHILDREN];
-    unsigned int n[NUM_CHILDREN] = { 0 };
-    unsigned int m[NUM_CHILDREN] = { LINE_THRESHOLD, LINE_THRESHOLD, LINE_THRESHOLD, LINE_THRESHOLD };
+    unsigned int n[NUM_CHILDREN] = {0};
+    unsigned int m[NUM_CHILDREN] = {LINE_THRESHOLD, LINE_THRESHOLD,
+                                    LINE_THRESHOLD, LINE_THRESHOLD};
 
     for (int i = 0; i < NUM_CHILDREN; i++) {
       quad_lines[i] = (Line **)malloc(sizeof(Line *) * LINE_THRESHOLD);
@@ -81,7 +82,7 @@ QuadTree *QuadTree_create(CollisionWorld *collisionWorld,
         return NULL;
       }
     }
-    
+
     // Check if line fits inside a quadrant. If it does, add it.
     // If it doesn't fit into any quadrent, store it in parent.
     for (unsigned int i = 0; i < numOfLines; i++) {
@@ -106,33 +107,32 @@ QuadTree *QuadTree_create(CollisionWorld *collisionWorld,
       }
     }
 
-    cilk_for (int i = 0; i < quad_tree->numOfLines; i++) {
+    cilk_for(int i = 0; i < quad_tree->numOfLines; i++) {
       Line *l1 = quad_tree->lines[i];
       for (int j = i + 1; j < quad_tree->numOfLines; j++) {
         Line *l2 = quad_tree->lines[j];
-        register_collision(collisionWorld, intersectionEventList, l1, l2, numCollisions);
+        register_collision(collisionWorld, intersectionEventList, l1, l2,
+                           numCollisions);
       }
     }
 
     // Create the children
     for (int i = 0; i < NUM_CHILDREN; i++) {
       if (n[i] != 0)
-        quad_tree->children[i] =
-          cilk_spawn QuadTree_create(collisionWorld, intersectionEventList,
-                          quad_lines[i], n[i], quad_tree,
-                          *vec_array[i * 2],
-                          *vec_array[i * 2 + 1], numCollisions);
+        quad_tree->children[i] = cilk_spawn QuadTree_create(
+            collisionWorld, intersectionEventList, quad_lines[i], n[i],
+            quad_tree, *vec_array[i * 2], *vec_array[i * 2 + 1], numCollisions);
     }
     cilk_sync;
   } else {
     quad_tree->lines = lines;
     quad_tree->numOfLines = numOfLines;
-    // printf("%d\n", numOfLines);
-    cilk_for (int i = 0; i < numOfLines; i++) {
+    cilk_for(int i = 0; i < numOfLines; i++) {
       Line *l1 = lines[i];
       for (int j = i + 1; j < numOfLines; j++) {
         Line *l2 = lines[j];
-        register_collision(collisionWorld, intersectionEventList, l1, l2, numCollisions);
+        register_collision(collisionWorld, intersectionEventList, l1, l2,
+                           numCollisions);
       }
     }
   }
@@ -140,9 +140,10 @@ QuadTree *QuadTree_create(CollisionWorld *collisionWorld,
 }
 
 void QuadTree_destroy(QuadTree *quad_tree) {
-  if (quad_tree == NULL) return;
+  if (quad_tree == NULL)
+    return;
   if (quad_tree->children != NULL) {
-    cilk_for (int i = 0; i < NUM_CHILDREN; i++) {
+    cilk_for(int i = 0; i < NUM_CHILDREN; i++) {
       QuadTree_destroy(quad_tree->children[i]);
     }
   }
@@ -174,7 +175,7 @@ Vec **getPoints(Vec tl, Vec br) {
     }
   }
 
-  double scalar[3] = { 0, 0.5, 1 };
+  double scalar[3] = {0, 0.5, 1};
   double diffx = br.x - tl.x;
   double diffy = tl.y - br.y;
   for (int i = 0; i < 3; i++) {
@@ -190,7 +191,7 @@ Vec **getPoints(Vec tl, Vec br) {
     }
   }
 
-  int indices[8] = { 6, 4, 7, 5, 3, 1, 4, 2 };
+  int indices[8] = {6, 4, 7, 5, 3, 1, 4, 2};
   for (int i = 0; i < 8; i++) {
     ret[i] = vec_array[indices[i]];
   }
@@ -202,12 +203,13 @@ void detect_collision(CollisionWorld *collisionWorld,
                       IntersectionEventListReducer *intersectionEventList,
                       Line **lines, unsigned int numOfLines, QuadTree *parent,
                       uintReducer *numCollisions) {
-  cilk_for (int i = 0; i < numOfLines; i++) {
+  cilk_for(int i = 0; i < numOfLines; i++) {
     Line *l1 = lines[i];
 
     for (int j = 0; j < parent->numOfLines; j++) {
       Line *l2 = parent->lines[j];
-      register_collision(collisionWorld, intersectionEventList, l1, l2, numCollisions);
+      register_collision(collisionWorld, intersectionEventList, l1, l2,
+                         numCollisions);
     }
   }
 }
@@ -227,14 +229,16 @@ void register_collision(CollisionWorld *collisionWorld,
       intersect(l1, l2, collisionWorld->timeStep);
   if (intersectionType != NO_INTERSECTION) {
     IntersectionEventList_appendNode(intersectionEventList, l1, l2,
-                                      intersectionType);
+                                     intersectionType);
     *(numCollisions) += 1;
   }
 }
 
 void QuadTree_print(QuadTree *quad_tree) {
-  if (quad_tree == NULL) return;
-  printf("POSITION: (%f, %f), (%f, %f)\n", quad_tree->tl.x, quad_tree->tl.y, quad_tree->br.x, quad_tree->br.y);
+  if (quad_tree == NULL)
+    return;
+  printf("POSITION: (%f, %f), (%f, %f)\n", quad_tree->tl.x, quad_tree->tl.y,
+         quad_tree->br.x, quad_tree->br.y);
   printf("NUM LINES: %d\n", quad_tree->numOfLines);
   if (quad_tree->children != NULL) {
     for (int i = 0; i < NUM_CHILDREN; i++) {
@@ -245,7 +249,8 @@ void QuadTree_print(QuadTree *quad_tree) {
 
 void increase_line_capacity(QuadTree *quad_tree) {
   int mul = 2;
-  Line **tmp = (Line **)realloc(quad_tree->lines, sizeof(Line *) * quad_tree->lineCapacity * 2);
+  Line **tmp = (Line **)realloc(quad_tree->lines,
+                                sizeof(Line *) * quad_tree->lineCapacity * 2);
   if (tmp == NULL) {
     free(tmp);
   } else {
@@ -255,8 +260,7 @@ void increase_line_capacity(QuadTree *quad_tree) {
 }
 
 void increase_line_capacity2(Line **quad_lines[NUM_CHILDREN],
-                                    unsigned int m[NUM_CHILDREN],
-                                    int idx) {
+                             unsigned int m[NUM_CHILDREN], int idx) {
   Line **tmp = (Line **)realloc(quad_lines[idx], sizeof(Line *) * m[idx] * 2);
   if (tmp == NULL) {
     free(tmp);
